@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"strconv"
 )
 
 func main() {
@@ -15,13 +16,10 @@ func main() {
 	var path string
 	path = flag.Arg(0)
 
-	//fmt.Printf("humanReadable is %t, path is %s\n", *humanReadable, path)
-
 	g := godu{
 		humanReadable: *humanReadable,
 	}
 	g.getDirectoryDiskUsageInfo(path)
-	//fmt.Println(result)
 
 }
 
@@ -50,7 +48,6 @@ func (g godu) getDirectoryDiskUsageInfo(path string) directorySizeInfo {
 	}
 	// handle single file use case
 	if pathFile.IsDir() == false {
-		//fmt.Printf("%d %s\n", pathFile.Size(), path)
 		g.reportStatistics(path, pathFile.Size())
 		summary.totalSize = pathFile.Size()
 		return summary
@@ -66,7 +63,6 @@ func (g godu) getDirectoryDiskUsageInfo(path string) directorySizeInfo {
 	}
 
 	for _, file := range files {
-		// get size of files
 		info, err := file.Info()
 		if err != nil {
 			fmt.Println("error getting file info")
@@ -94,7 +90,7 @@ func (g godu) reportStatistics(path string, size int64) {
 	if g.humanReadable {
 		sizeAsString = ByteCountIEC(size)
 	} else {
-		sizeAsString = string(size)
+		sizeAsString = strconv.FormatInt(size, 10)
 	}
 	fmt.Printf("%s\t\t%s\n", sizeAsString, path)
 }
