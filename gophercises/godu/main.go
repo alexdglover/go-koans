@@ -15,11 +15,18 @@ func main() {
 	var path string
 	path = flag.Arg(0)
 
-	fmt.Printf("humanReadable is %t, path is %s\n", *humanReadable, path)
+	//fmt.Printf("humanReadable is %t, path is %s\n", *humanReadable, path)
 
-	getDirectoryDiskUsageInfo(path)
+	g := godu{
+		humanReadable: *humanReadable,
+	}
+	g.getDirectoryDiskUsageInfo(path)
 	//fmt.Println(result)
 
+}
+
+type godu struct {
+	humanReadable bool
 }
 
 type directorySizeInfo struct {
@@ -27,7 +34,7 @@ type directorySizeInfo struct {
 	files     []fs.DirEntry
 }
 
-func getDirectoryDiskUsageInfo(path string) directorySizeInfo {
+func (g godu) getDirectoryDiskUsageInfo(path string) directorySizeInfo {
 	summary := directorySizeInfo{
 		totalSize: 0,
 		files:     make([]fs.DirEntry, 0),
@@ -43,13 +50,14 @@ func getDirectoryDiskUsageInfo(path string) directorySizeInfo {
 	}
 	// handle single file use case
 	if pathFile.IsDir() == false {
-		fmt.Printf("%d %s\n", pathFile.Size(), path)
+		//fmt.Printf("%d %s\n", pathFile.Size(), path)
+		g.reportStatistics(path, pathFile.Size())
 		summary.totalSize = pathFile.Size()
 		return summary
 	}
 
 	if string(path[len(path)-1:]) != "/" {
-		path = fmt.Sprintf("%s/", path)
+		path += "/"
 	}
 
 	files, err := os.ReadDir(path)
@@ -67,29 +75,39 @@ func getDirectoryDiskUsageInfo(path string) directorySizeInfo {
 		if info.IsDir() != true {
 			// if it's not a directory, assume it's a file
 			summary.totalSize += info.Size()
-			fmt.Printf("%d %s%s\n", info.Size(), path, info.Name())
+			g.reportStatistics(path+info.Name(), info.Size())
 		} else if info.IsDir() == true {
-			fmt.Printf("%s is a dir! recursing...\n", info.Name())
-			result := getDirectoryDiskUsageInfo(fmt.Sprintf("%s%s", path, info.Name()))
-			//// a directory, regardless of its contents, is always 4096 bytes or 4KB
-			//summary.totalSize += 4096
+			result := g.getDirectoryDiskUsageInfo(path + info.Name())
 			summary.totalSize += result.totalSize
 		}
 	}
 
 	// a directory, regardless of its contents, is always 4096 bytes or 4KB
 	summary.totalSize += 4096
-	fmt.Printf("%d %s\n", summary.totalSize, path)
+	g.reportStatistics(path, summary.totalSize)
 
 	return summary
+}
 
-	/*
-		example du -h output
-		24K	 ./gophercises/godu/.idea
-		2.0K ./gophercises/godu
-		28K	 ./gophercises/quiz-game/.idea
-		2.2M ./gophercises/quiz-game
-		4.2M ./gophercises
-		7.1M .
-	*/
+func (g godu) reportStatistics(path string, size int64) {
+	var sizeAsString string
+	if g.humanReadable {
+		sizeAsString = ByteCountIEC(size)
+	} else {
+		sizeAsString = string(size)
+	}
+	fmt.Printf("%s\t\t%s\n", sizeAsString, path)
+}
+func ByteCountIEC(b int64) string {
+	const unit = 1024
+	if b < unit {
+		return fmt.Sprintf("%d B", b)
+	}
+	div, exp := int64(unit), 0
+	for n := b / unit; n >= unit; n /= unit {
+		div *= unit
+		exp++
+	}
+	return fmt.Sprintf("%.1f %ciB",
+		float64(b)/float64(div), "KMGTPE"[exp])
 }
