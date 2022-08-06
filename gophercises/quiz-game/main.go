@@ -21,7 +21,7 @@ func main() {
 	r := csv.NewReader(file)
 	lines, err := r.ReadAll()
 	if err != nil {
-		exit("Failed to parse the provided CSV fiel")
+		exit("Failed to parse the provided CSV file")
 	}
 
 	problems := parseLines(lines)
